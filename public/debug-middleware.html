@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Express Middleware Debug</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background-color: #f7f7f7;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    pre {
+      background-color: #f1f1f1;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: white;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Express Middleware Debug Page</h1>
+  
+  <div class="section">
+    <h2>Server Information</h2>
+    <div id="serverInfo">Loading...</div>
+  </div>
+  
+  <div class="section">
+    <h2>Test HTML Files</h2>
+    <p>Click to test if the files are being served correctly:</p>
+    <ul id="testLinks"></ul>
+  </div>
+  
+  <div class="section">
+    <h2>Headers Received</h2>
+    <pre id="headersReceived">Checking...</pre>
+  </div>
+  
+  <div class="section">
+    <h2>File Access Test</h2>
+    <div id="fileAccessTest">
+      <button id="testButton">Test File Access</button>
+      <div id="testResults"></div>
+    </div>
+  </div>
+
+  <script>
+    // Display current page's headers
+    const displayHeaders = () => {
+      const headersEl = document.getElementById('headersReceived');
+      
+      fetch(window.location.href)
+        .then(response => {
+          let headerText = '';
+          for (const [key, value] of response.headers.entries()) {
+            headerText += `${key}: ${value}\n`;
+          }
+          headersEl.textContent = headerText || 'No headers found';
+        })
+        .catch(error => {
+          headersEl.textContent = `Error fetching headers: ${error.message}`;
+          headersEl.className = 'error';
+        });
+    };
+    
+    // Display server information
+    const displayServerInfo = () => {
+      const serverInfoEl = document.getElementById('serverInfo');
+      
+      const info = {
+        userAgent: navigator.userAgent,
+        href: window.location.href,
+        hostname: window.location.hostname,
+        protocol: window.location.protocol,
+        port: window.location.port,
+        pathname: window.location.pathname
+      };
+      
+      let infoHTML = '<ul>';
+      for (const [key, value] of Object.entries(info)) {
+        infoHTML += `<li><strong>${key}:</strong> ${value}</li>`;
+      }
+      infoHTML += '</ul>';
+      
+      serverInfoEl.innerHTML = infoHTML;
+    };
+    
+    // Set up test links
+    const setupTestLinks = () => {
+      const testLinksEl = document.getElementById('testLinks');
+      
+      const testFiles = [
+        'test.html',
+        'event-media-test.html',
+        'direct-event-media-test.html',
+        'event-media-fix.html',
+        'create-test-event.html',
+        'calendar-upload-test.html',
+        'media-debug.html',
+        'debug-middleware.html'
+      ];
+      
+      let linksHTML = '';
+      testFiles.forEach(file => {
+        linksHTML += `<li><a href="/${file}" target="_blank">${file}</a></li>`;
+      });
+      
+      testLinksEl.innerHTML = linksHTML;
+    };
+    
+    // Test file access
+    const setupFileAccessTest = () => {
+      const testButton = document.getElementById('testButton');
+      const testResults = document.getElementById('testResults');
+      
+      testButton.addEventListener('click', () => {
+        testResults.innerHTML = '<p>Testing file access...</p>';
+        
+        // Test the files in sequence
+        const testFiles = [
+          'test.html',
+          'event-media-test.html',
+          'direct-event-media-test.html',
+          'event-media-fix.html'
+        ];
+        
+        Promise.all(testFiles.map(file => 
+          fetch(`/${file}`)
+            .then(response => ({
+              file,
+              status: response.status,
+              ok: response.ok,
+              contentType: response.headers.get('content-type')
+            }))
+            .catch(error => ({
+              file,
+              error: error.message
+            }))
+        )).then(results => {
+          let resultsHTML = '<ul>';
+          
+          results.forEach(result => {
+            if (result.error) {
+              resultsHTML += `<li class="error">${result.file}: Error - ${result.error}</li>`;
+            } else {
+              const statusClass = result.ok ? 'success' : 'error';
+              resultsHTML += `<li class="${statusClass}">
+                ${result.file}: ${result.status} 
+                (Content-Type: ${result.contentType || 'unknown'})
+              </li>`;
+            }
+          });
+          
+          resultsHTML += '</ul>';
+          testResults.innerHTML = resultsHTML;
+        });
+      });
+    };
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      displayHeaders();
+      displayServerInfo();
+      setupTestLinks();
+      setupFileAccessTest();
+    });
+  </script>
+</body>
+</html>

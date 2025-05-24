@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Media Test Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c6b9e;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: white;
+            border-color: #ddd;
+            border-bottom-color: white;
+            margin-bottom: -1px;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 15px 0;
+            display: block;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #2c6b9e;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #245985;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .url-input {
+            display: flex;
+        }
+        .url-input input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        .image-preview {
+            max-width: 300px;
+            max-height: 300px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            display: block;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calendar Media Test Interface</h1>
+        <p>This tool helps debug and test calendar event media upload and URL handling.</p>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="event-creation">Event Creation</div>
+            <div class="tab" data-tab="media-upload">Media Upload</div>
+            <div class="tab" data-tab="url-test">URL Format Test</div>
+        </div>
+        
+        <!-- Event Creation Tab -->
+        <div class="tab-content active" id="event-creation">
+            <h2>Test Event Creation with Media</h2>
+            <p>Create a test event with media attachment to verify URL handling:</p>
+            
+            <form id="event-form" enctype="multipart/form-data">
+                <label for="title">Event Title:</label>
+                <input type="text" id="title" name="title" required value="Test Event">
+                
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="3" required>This is a test event created to verify media handling</textarea>
+                
+                <label for="startDate">Start Date:</label>
+                <input type="datetime-local" id="startDate" name="startDate" required>
+                
+                <label for="endDate">End Date:</label>
+                <input type="datetime-local" id="endDate" name="endDate" required>
+                
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location" value="Barefoot Bay Test Location">
+                
+                <label for="category">Category:</label>
+                <select id="category" name="category">
+                    <option value="social">Social</option>
+                    <option value="recreation">Recreation</option>
+                    <option value="education">Education</option>
+                    <option value="health">Health</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="other">Other</option>
+                </select>
+                
+                <label for="media">Event Image:</label>
+                <input type="file" id="media" name="media" accept="image/*">
+                
+                <button type="submit">Create Test Event</button>
+            </form>
+            
+            <div class="result-container" id="event-result">
+                <h3>Result:</h3>
+                <pre id="event-response"></pre>
+                <div id="image-preview-container"></div>
+            </div>
+        </div>
+        
+        <!-- Media Upload Tab -->
+        <div class="tab-content" id="media-upload">
+            <h2>Direct Media Upload Test</h2>
+            <p>Test direct media upload to verify Object Storage handling:</p>
+            
+            <form id="upload-form" enctype="multipart/form-data">
+                <label for="upload-file">Select Image:</label>
+                <input type="file" id="upload-file" name="file" accept="image/*" required>
+                
+                <button type="submit">Upload Media</button>
+            </form>
+            
+            <div class="result-container">
+                <h3>Result:</h3>
+                <pre id="upload-response"></pre>
+                <div id="upload-preview-container"></div>
+            </div>
+        </div>
+        
+        <!-- URL Format Test Tab -->
+        <div class="tab-content" id="url-test">
+            <h2>URL Format Testing</h2>
+            <p>Test different URL formats to verify proxy handling:</p>
+            
+            <div class="url-test-form">
+                <h3>Test Standard Format</h3>
+                <p>Pattern: /api/storage-proxy/CALENDAR/events/[filename]</p>
+                <div class="url-input">
+                    <input type="text" id="standard-url" placeholder="Enter filename">
+                    <button id="test-standard">Test URL</button>
+                </div>
+                <div id="standard-result"></div>
+                
+                <h3>Test Duplicate Bucket Format</h3>
+                <p>Pattern: /api/storage-proxy/CALENDAR/CALENDAR/events/[filename]</p>
+                <div class="url-input">
+                    <input type="text" id="duplicate-url" placeholder="Enter filename">
+                    <button id="test-duplicate">Test URL</button>
+                </div>
+                <div id="duplicate-result"></div>
+                
+                <h3>Test Missing Bucket Format</h3>
+                <p>Pattern: /api/storage-proxy/events/[filename]</p>
+                <div class="url-input">
+                    <input type="text" id="missing-url" placeholder="Enter filename">
+                    <button id="test-missing">Test URL</button>
+                </div>
+                <div id="missing-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set default date values
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set date inputs to today and tomorrow
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Format dates for datetime-local input
+            const formatDate = (date) => {
+                return date.toISOString().slice(0, 16);
+            };
+            
+            document.getElementById('startDate').value = formatDate(today);
+            document.getElementById('endDate').value = formatDate(tomorrow);
+            
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and its content
+                    tab.classList.add('active');
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Event Form Submission
+            document.getElementById('event-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const resultContainer = document.getElementById('event-response');
+                const imagePreviewContainer = document.getElementById('image-preview-container');
+                imagePreviewContainer.innerHTML = '';
+                resultContainer.innerHTML = 'Processing...';
+                
+                const formData = new FormData(e.target);
+                const eventData = {
+                    title: formData.get('title'),
+                    description: formData.get('description'),
+                    startDate: formData.get('startDate'),
+                    endDate: formData.get('endDate'),
+                    location: formData.get('location'),
+                    category: formData.get('category'),
+                    contactInfo: {},
+                    hoursOfOperation: {}
+                };
+                
+                // Create a new FormData for sending
+                const submitData = new FormData();
+                submitData.append('eventData', JSON.stringify(eventData));
+                
+                const mediaFile = formData.get('media');
+                if (mediaFile && mediaFile.size > 0) {
+                    submitData.append('media', mediaFile);
+                }
+                
+                try {
+                    const response = await fetch('/api/calendar-media/test-event', {
+                        method: 'POST',
+                        body: submitData
+                    });
+                    
+                    const result = await response.json();
+                    resultContainer.innerHTML = JSON.stringify(result, null, 2);
+                    
+                    if (result.success && result.event && result.event.mediaUrls && result.event.mediaUrls.length > 0) {
+                        const mediaUrl = result.event.mediaUrls[0];
+                        const img = document.createElement('img');
+                        img.src = mediaUrl;
+                        img.className = 'image-preview';
+                        img.onerror = () => {
+                            imagePreviewContainer.innerHTML = `<p class="error">Failed to load image from: ${mediaUrl}</p>`;
+                        };
+                        img.onload = () => {
+                            const statusElement = document.createElement('p');
+                            statusElement.innerHTML = `<span class="success">Image loaded successfully from:</span> ${mediaUrl}`;
+                            imagePreviewContainer.prepend(statusElement);
+                        };
+                        imagePreviewContainer.appendChild(img);
+                    }
+                } catch (err) {
+                    resultContainer.innerHTML = `Error: ${err.message}\n\n${err.stack}`;
+                }
+            });
+            
+            // Upload Form Submission
+            document.getElementById('upload-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const resultContainer = document.getElementById('upload-response');
+                const previewContainer = document.getElementById('upload-preview-container');
+                previewContainer.innerHTML = '';
+                resultContainer.innerHTML = 'Uploading...';
+                
+                const formData = new FormData(e.target);
+                
+                try {
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    resultContainer.innerHTML = JSON.stringify(result, null, 2);
+                    
+                    if (result.success && result.url) {
+                        const img = document.createElement('img');
+                        img.src = result.url;
+                        img.className = 'image-preview';
+                        img.onerror = () => {
+                            previewContainer.innerHTML = `<p class="error">Failed to load image from: ${result.url}</p>`;
+                        };
+                        img.onload = () => {
+                            const statusElement = document.createElement('p');
+                            statusElement.innerHTML = `<span class="success">Image loaded successfully from:</span> ${result.url}`;
+                            previewContainer.prepend(statusElement);
+                        };
+                        previewContainer.appendChild(img);
+                    }
+                } catch (err) {
+                    resultContainer.innerHTML = `Error: ${err.message}\n\n${err.stack}`;
+                }
+            });
+            
+            // URL Testing
+            document.getElementById('test-standard').addEventListener('click', () => {
+                const filename = document.getElementById('standard-url').value.trim();
+                if (!filename) return alert('Please enter a filename');
+                
+                const url = `/api/storage-proxy/CALENDAR/events/${filename}`;
+                testImageUrl(url, 'standard-result');
+            });
+            
+            document.getElementById('test-duplicate').addEventListener('click', () => {
+                const filename = document.getElementById('duplicate-url').value.trim();
+                if (!filename) return alert('Please enter a filename');
+                
+                const url = `/api/storage-proxy/CALENDAR/CALENDAR/events/${filename}`;
+                testImageUrl(url, 'duplicate-result');
+            });
+            
+            document.getElementById('test-missing').addEventListener('click', () => {
+                const filename = document.getElementById('missing-url').value.trim();
+                if (!filename) return alert('Please enter a filename');
+                
+                const url = `/api/storage-proxy/events/${filename}`;
+                testImageUrl(url, 'missing-result');
+            });
+            
+            function testImageUrl(url, resultId) {
+                const resultContainer = document.getElementById(resultId);
+                resultContainer.innerHTML = `Testing image load from: ${url}`;
+                
+                const img = document.createElement('img');
+                img.src = url;
+                img.className = 'image-preview';
+                img.onerror = () => {
+                    resultContainer.innerHTML = `<p class="error">Failed to load image from: ${url}</p>`;
+                };
+                img.onload = () => {
+                    resultContainer.innerHTML = `
+                        <p><span class="success">Image loaded successfully from:</span> ${url}</p>
+                        <img src="${url}" class="image-preview" alt="URL test result">
+                    `;
+                };
+                
+                // Start loading
+                setTimeout(() => {
+                    // If neither onload nor onerror fired after 5s, assume timeout
+                    if (!img.complete) {
+                        resultContainer.innerHTML = `<p class="error">Timeout trying to load: ${url}</p>`;
+                    }
+                }, 5000);
+            }
+        });
+    </script>
+</body>
+</html>

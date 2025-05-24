@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Static API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #555;
+        }
+        .map-container {
+            margin-top: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .map-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .controls {
+            margin-top: 15px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Maps Static API Test</h1>
+    
+    <div class="test-section">
+        <h2>Server-Side Proxy Test</h2>
+        <p>This tests the server-side proxy implementation (/api/google/staticmap) with multiple Referer headers.</p>
+        
+        <div class="map-container">
+            <div id="server-proxy-status" class="status">Testing...</div>
+            <img id="server-proxy-map" class="map-image" alt="Static Map via Server Proxy" 
+                 onerror="handleImageError('server-proxy')" 
+                 onload="handleImageSuccess('server-proxy')" />
+        </div>
+        
+        <div class="controls">
+            <button onclick="testServerProxy()">Test Server Proxy</button>
+        </div>
+        
+        <pre id="server-proxy-url"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>Direct Google Maps Test</h2>
+        <p>This tests direct access to Google Maps Static API (client-side).</p>
+        
+        <div class="map-container">
+            <div id="direct-status" class="status">Testing...</div>
+            <img id="direct-map" class="map-image" alt="Direct Static Map"
+                 onerror="handleImageError('direct')" 
+                 onload="handleImageSuccess('direct')" />
+        </div>
+        
+        <div class="controls">
+            <button onclick="testDirectAccess()">Test Direct Access</button>
+        </div>
+        
+        <pre id="direct-url"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>Custom Parameters Test</h2>
+        <p>Test with custom parameters (location, zoom level, size, etc).</p>
+        
+        <div class="controls">
+            <input type="text" id="location" placeholder="Location (e.g. Barefoot Bay, FL)" 
+                   value="625 Barefoot Blvd, Barefoot Bay, FL" />
+            <input type="number" id="zoom" placeholder="Zoom level (1-20)" value="15" min="1" max="20" />
+            <input type="text" id="size" placeholder="Size (e.g. 400x300)" value="400x300" />
+            <button onclick="testCustomParams()">Test Custom Parameters</button>
+        </div>
+        
+        <div class="map-container">
+            <div id="custom-status" class="status">Waiting for input...</div>
+            <img id="custom-map" class="map-image" alt="Custom Static Map"
+                 onerror="handleImageError('custom')" 
+                 onload="handleImageSuccess('custom')" />
+        </div>
+        
+        <pre id="custom-url"></pre>
+    </div>
+
+    <script>
+        // Default test locations
+        const defaultLocation = '625 Barefoot Blvd, Barefoot Bay, FL';
+        const defaultZoom = 15;
+        const defaultSize = '400x300';
+        
+        // Handle image load success
+        function handleImageSuccess(testId) {
+            document.getElementById(`${testId}-status`).textContent = 'SUCCESS: Image loaded successfully';
+            document.getElementById(`${testId}-status`).className = 'status success';
+        }
+        
+        // Handle image load error
+        function handleImageError(testId) {
+            document.getElementById(`${testId}-status`).textContent = 'ERROR: Image failed to load';
+            document.getElementById(`${testId}-status`).className = 'status error';
+        }
+        
+        // Test server-side proxy
+        function testServerProxy() {
+            const imgElement = document.getElementById('server-proxy-map');
+            const statusElement = document.getElementById('server-proxy-status');
+            const urlElement = document.getElementById('server-proxy-url');
+            
+            statusElement.textContent = 'Loading...';
+            statusElement.className = 'status';
+            
+            // Create URL with timestamp to prevent caching
+            const proxyUrl = `/api/google/staticmap?center=${encodeURIComponent(defaultLocation)}&zoom=${defaultZoom}&size=${defaultSize}&markers=color:red|${encodeURIComponent(defaultLocation)}&_t=${Date.now()}`;
+            
+            // Update the image source
+            imgElement.src = proxyUrl;
+            
+            // Display the URL
+            urlElement.textContent = proxyUrl;
+        }
+        
+        // Test direct access to Google Maps
+        function testDirectAccess() {
+            const imgElement = document.getElementById('direct-map');
+            const statusElement = document.getElementById('direct-status');
+            const urlElement = document.getElementById('direct-url');
+            
+            statusElement.textContent = 'Loading...';
+            statusElement.className = 'status';
+            
+            // Create direct URL with API key placeholder (key will be requested from server)
+            fetch('/api/google/mapkey')
+                .then(response => response.text())
+                .then(apiKey => {
+                    const directUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(defaultLocation)}&zoom=${defaultZoom}&size=${defaultSize}&markers=color:red|${encodeURIComponent(defaultLocation)}&key=${apiKey}&_t=${Date.now()}`;
+                    
+                    // Update the image source
+                    imgElement.src = directUrl;
+                    
+                    // Display the URL (mask API key for security)
+                    const maskedUrl = directUrl.replace(/key=([^&]*)/, 'key=API_KEY_MASKED');
+                    urlElement.textContent = maskedUrl;
+                })
+                .catch(error => {
+                    statusElement.textContent = `ERROR: Could not get API key: ${error.message}`;
+                    statusElement.className = 'status error';
+                });
+        }
+        
+        // Test with custom parameters
+        function testCustomParams() {
+            const imgElement = document.getElementById('custom-map');
+            const statusElement = document.getElementById('custom-status');
+            const urlElement = document.getElementById('custom-url');
+            
+            // Get values from input fields
+            const location = document.getElementById('location').value || defaultLocation;
+            const zoom = document.getElementById('zoom').value || defaultZoom;
+            const size = document.getElementById('size').value || defaultSize;
+            
+            statusElement.textContent = 'Loading...';
+            statusElement.className = 'status';
+            
+            // Create URL with custom parameters and timestamp to prevent caching
+            const proxyUrl = `/api/google/staticmap?center=${encodeURIComponent(location)}&zoom=${zoom}&size=${size}&markers=color:red|${encodeURIComponent(location)}&_t=${Date.now()}`;
+            
+            // Update the image source
+            imgElement.src = proxyUrl;
+            
+            // Display the URL
+            urlElement.textContent = proxyUrl;
+        }
+        
+        // Run tests on page load
+        window.onload = function() {
+            testServerProxy();
+            // Don't automatically test direct access to avoid API key security concerns
+            document.getElementById('direct-status').textContent = 'Click "Test Direct Access" to run this test';
+        };
+    </script>
+</body>
+</html>

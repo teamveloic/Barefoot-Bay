@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Media Upload Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .success {
+      border-left: 5px solid #2ecc71;
+    }
+    .error {
+      border-left: 5px solid #e74c3c;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .upload-instructions {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      border-left: 5px solid #3498db;
+    }
+    .image-preview {
+      max-width: 300px;
+      max-height: 300px;
+      margin-top: 15px;
+      border: 1px dashed #ddd;
+      padding: 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .image-preview img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Calendar Media Upload Test</h1>
+  
+  <div class="upload-instructions">
+    <p><strong>This is a diagnostic tool to test calendar media uploads.</strong></p>
+    <p>This tool will help identify if Object Storage uploads are working correctly for event media.</p>
+    <ol>
+      <li>Select an image file to upload</li>
+      <li>Click the Upload button</li>
+      <li>Review the response details including the URL and storage mapping</li>
+      <li>The image preview will attempt to display the uploaded image using the returned URL</li>
+    </ol>
+  </div>
+  
+  <form id="uploadForm">
+    <div class="form-group">
+      <label for="mediaFile">Select Image File:</label>
+      <input type="file" id="mediaFile" name="media" accept="image/*" required>
+    </div>
+    
+    <button type="submit" id="uploadButton">Upload Test Image</button>
+  </form>
+  
+  <div id="previewContainer" style="display: none;">
+    <h3>Image Preview:</h3>
+    <div class="image-preview">
+      <img id="imagePreview" src="" alt="Upload preview">
+    </div>
+    <p><small>If this image does not display, it confirms there is an issue with the storage URL format.</small></p>
+  </div>
+  
+  <div id="resultContainer" style="display: none;">
+    <h3>Upload Result:</h3>
+    <div id="result" class="result"></div>
+  </div>
+  
+  <div id="debugContainer" style="display: none;">
+    <h3>Debug Information:</h3>
+    <div id="debug" class="result"></div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('uploadForm');
+      const uploadButton = document.getElementById('uploadButton');
+      const resultContainer = document.getElementById('resultContainer');
+      const result = document.getElementById('result');
+      const previewContainer = document.getElementById('previewContainer');
+      const imagePreview = document.getElementById('imagePreview');
+      const debugContainer = document.getElementById('debugContainer');
+      const debug = document.getElementById('debug');
+      
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('mediaFile');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          showResult('Please select a file to upload', 'error');
+          return;
+        }
+        
+        // Disable button during upload
+        uploadButton.disabled = true;
+        uploadButton.textContent = 'Uploading...';
+        
+        try {
+          const formData = new FormData();
+          formData.append('media', file);
+          
+          const response = await fetch('/api/test-calendar-upload', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include' // Include session cookies
+          });
+          
+          const data = await response.json();
+          
+          // Re-enable button
+          uploadButton.disabled = false;
+          uploadButton.textContent = 'Upload Test Image';
+          
+          if (response.ok && data.success) {
+            // Show the result
+            showResult(JSON.stringify(data, null, 2), 'success');
+            
+            // Show more detailed debug info
+            debugContainer.style.display = 'block';
+            debug.textContent = `
+URL Information:
+- Original filename: ${data.originalname}
+- Saved as: ${data.filename}
+- File size: ${data.filesize} bytes
+- Returned URL: ${data.url}
+
+Testing URL Access:
+1. Direct Object Storage URL format: https://object-storage.replit.app/CALENDAR/events/${data.filename}
+2. Proxy URL format: /api/storage-proxy/CALENDAR/events/${data.filename}
+3. Legacy format: /uploads/calendar/${data.filename}
+`;
+
+            // Display the image preview
+            previewContainer.style.display = 'block';
+            imagePreview.src = data.url;
+            
+            // Test loading the image
+            imagePreview.onerror = function() {
+              previewContainer.innerHTML += `
+                <div class="error">
+                  <p><strong>Image failed to load using the returned URL: ${data.url}</strong></p>
+                  <p>This confirms there is an issue with the storage URL format or the file was not uploaded correctly.</p>
+                  <p>Testing alternative URL formats:</p>
+                </div>
+              `;
+              
+              // Try the proxy format as a fallback
+              const proxyUrl = `/api/storage-proxy/CALENDAR/events/${data.filename}`;
+              const proxyImg = document.createElement('img');
+              proxyImg.src = proxyUrl;
+              proxyImg.alt = 'Proxy URL test';
+              proxyImg.style.maxWidth = '300px';
+              proxyImg.style.border = '1px solid #ddd';
+              
+              const proxyContainer = document.createElement('div');
+              proxyContainer.innerHTML = `<p>Testing proxy URL: ${proxyUrl}</p>`;
+              proxyContainer.appendChild(proxyImg);
+              previewContainer.appendChild(proxyContainer);
+            };
+            
+            imagePreview.onload = function() {
+              previewContainer.innerHTML += `
+                <div class="success">
+                  <p><strong>Image loaded successfully using the returned URL!</strong></p>
+                </div>
+              `;
+            };
+          } else {
+            showResult(`Error: ${data.message || 'Unknown error'}`, 'error');
+          }
+        } catch (error) {
+          // Re-enable button
+          uploadButton.disabled = false;
+          uploadButton.textContent = 'Upload Test Image';
+          
+          showResult(`Error: ${error.message}`, 'error');
+        }
+      });
+      
+      function showResult(message, type) {
+        resultContainer.style.display = 'block';
+        result.textContent = message;
+        result.className = `result ${type}`;
+      }
+    });
+  </script>
+</body>
+</html>

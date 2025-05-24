@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Media Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #336699;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            display: block;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #336699;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background-color: #f8f8f8;
+            white-space: pre-wrap;
+        }
+        .img-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real Estate Media Upload Test</h1>
+    <p>This page tests the real estate media upload endpoint with Object Storage integration.</p>
+
+    <div class="form-group">
+        <label for="media-files">Select Image Files:</label>
+        <input type="file" id="media-files" multiple accept="image/*">
+    </div>
+
+    <button id="upload-btn">Upload to Object Storage</button>
+
+    <div class="results" id="results">Results will appear here...</div>
+    
+    <h2>Uploaded Images Preview:</h2>
+    <div id="preview-container"></div>
+
+    <script>
+        document.getElementById('upload-btn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('media-files');
+            const resultArea = document.getElementById('results');
+            const previewContainer = document.getElementById('preview-container');
+            
+            if (!fileInput.files.length) {
+                resultArea.textContent = 'Please select at least one file to upload.';
+                return;
+            }
+            
+            resultArea.textContent = 'Uploading...';
+            previewContainer.innerHTML = '';
+            
+            const formData = new FormData();
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('media', fileInput.files[i]);
+            }
+            
+            try {
+                const response = await fetch('/api/upload/real-estate-media', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                resultArea.textContent = JSON.stringify(data, null, 2);
+                
+                // Display uploaded images
+                if (data.urls && data.urls.length > 0) {
+                    data.urls.forEach(url => {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.className = 'img-preview';
+                        img.alt = 'Uploaded image';
+                        previewContainer.appendChild(img);
+                    });
+                }
+            } catch (error) {
+                resultArea.textContent = 'Error uploading files: ' + error.message;
+                console.error('Upload error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

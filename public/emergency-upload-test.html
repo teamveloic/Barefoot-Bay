@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Upload Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #d02020;
+    }
+    .upload-container {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 10px 0;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    #uploadResult {
+      margin-top: 20px;
+    }
+    .preview-image {
+      max-width: 300px;
+      max-height: 300px;
+      margin-top: 10px;
+      border: 1px solid #ddd;
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Emergency Upload Test</h1>
+  <p>This page helps diagnose and fix media upload issues on Barefoot Bay.</p>
+
+  <div class="upload-container">
+    <h2>Test Banner Upload</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <div>
+        <label for="bannerImage">Select an image to upload:</label>
+        <input type="file" id="bannerImage" name="bannerImage" accept="image/*" required>
+      </div>
+      <button type="submit" id="uploadButton">Upload Using Emergency Endpoint</button>
+    </form>
+    <div id="status" style="display: none;"></div>
+  </div>
+
+  <div id="uploadResult"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('uploadForm');
+      const statusDiv = document.getElementById('status');
+      const uploadButton = document.getElementById('uploadButton');
+      const resultDiv = document.getElementById('uploadResult');
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('bannerImage');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          showStatus('Please select a file to upload', 'error');
+          return;
+        }
+        
+        // Disable the button and show loading status
+        uploadButton.disabled = true;
+        showStatus('Uploading file...', 'info');
+        
+        try {
+          const formData = new FormData();
+          formData.append('bannerImage', file);
+          
+          // Use the emergency upload endpoint
+          const response = await fetch('/api/emergency/banner-upload', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include' // Include cookies for authentication
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            showStatus('Upload successful!', 'success');
+            
+            // Display the uploaded image and details
+            resultDiv.innerHTML = `
+              <h3>Upload Successful</h3>
+              <p><strong>Production URL:</strong> ${result.url}</p>
+              <p><strong>Development URL:</strong> ${result.developmentUrl}</p>
+              <p><strong>Message:</strong> ${result.message}</p>
+              <h4>Image Preview:</h4>
+              <img src="${result.url}" alt="Uploaded Image" class="preview-image">
+            `;
+          } else {
+            showStatus(`Upload failed: ${result.message}`, 'error');
+          }
+        } catch (error) {
+          showStatus(`Error: ${error.message}`, 'error');
+          console.error('Error during upload:', error);
+        } finally {
+          // Re-enable the button
+          uploadButton.disabled = false;
+        }
+      });
+      
+      function showStatus(message, type) {
+        statusDiv.textContent = message;
+        statusDiv.className = type;
+        statusDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

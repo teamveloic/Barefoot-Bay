@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banner Slides Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .actions {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 5px;
+    }
+    button {
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .image-container {
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .image-row {
+      display: flex;
+      margin-bottom: 15px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .image-box {
+      flex: 1;
+      min-width: 300px;
+      border: 1px dashed #ccc;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .image-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    .image-frame {
+      height: 200px;
+      background-color: #f5f5f5;
+      margin-bottom: 5px;
+      position: relative;
+      overflow: hidden;
+    }
+    img, video {
+      max-width: 100%;
+      max-height: 200px;
+      display: block;
+      margin: 0 auto;
+      object-fit: contain;
+    }
+    .status {
+      font-size: 12px;
+      color: #666;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      overflow: auto;
+      max-height: 100px;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Banner Slides Test</h1>
+  
+  <div class="actions">
+    <button id="clearCache">Clear Cache</button>
+    <button id="testAll">Test All Images</button>
+    <button id="reloadPage">Reload Page</button>
+  </div>
+  
+  <div class="image-container">
+    <h2>Common Banner Images</h2>
+    
+    <div class="image-row">
+      <div class="image-box">
+        <div class="image-title">Placeholder Filesystem Path</div>
+        <div class="image-frame">
+          <img src="/public/banner-placeholder.jpg" alt="Placeholder" onerror="this.parentNode.innerHTML += '<p class=\'error\'>Error loading image</p>'" onload="this.parentNode.innerHTML += '<p class=\'success\'>Image loaded successfully</p>'">
+        </div>
+        <div class="status">Path: /public/banner-placeholder.jpg</div>
+      </div>
+      
+      <div class="image-box">
+        <div class="image-title">Default Banner Image</div>
+        <div class="image-frame">
+          <img src="/uploads/banner-slides/placeholder-banner.png" alt="Default Banner" onerror="this.parentNode.innerHTML += '<p class=\'error\'>Error loading image</p>'" onload="this.parentNode.innerHTML += '<p class=\'success\'>Image loaded successfully</p>'">
+        </div>
+        <div class="status">Path: /uploads/banner-slides/placeholder-banner.png</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="image-container">
+    <h2>Recent Banner Images</h2>
+    <div id="dynamicImages"></div>
+  </div>
+  
+  <div class="image-container">
+    <h2>Object Storage Test</h2>
+    <div id="objectStorageTest"></div>
+  </div>
+  
+  <script>
+    // Fetch banner slides data
+    async function fetchBannerSlides() {
+      try {
+        const response = await fetch('/api/banner-slides');
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching banner slides:', error);
+        return { bannerSlides: [] };
+      }
+    }
+    
+    // Clear localStorage cache for images
+    function clearCache() {
+      if (window.localStorage) {
+        const keysToRemove = [];
+        
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+              key.includes('banner-slides') || 
+              key.includes('bannerImage') ||
+              key.includes('media-cache:/')
+            )) {
+            keysToRemove.push(key);
+          }
+        }
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          console.log(`Cleared cached item: ${key}`);
+        });
+        
+        console.log(`Cleared ${keysToRemove.length} cached items`);
+      }
+      
+      // Set a flag to force reloading of banners
+      window.__forceReloadBanners = true;
+      window.__lastCacheClear = new Date().toISOString();
+      
+      alert(`Cache cleared: ${keysToRemove.length} items removed`);
+    }
+    
+    // Generate alternative paths to test
+    function generateAlternativePaths(originalPath) {
+      if (!originalPath) return [];
+      
+      const filename = originalPath.split('/').pop();
+      
+      return [
+        originalPath,
+        // Without /uploads prefix if it exists
+        originalPath.replace('/uploads/', '/'),
+        // With /uploads prefix if it doesn't exist
+        originalPath.startsWith('/uploads/') ? originalPath : `/uploads${originalPath.startsWith('/') ? '' : '/'}${originalPath}`,
+        // Object Storage proxy
+        `/api/storage-proxy/BANNER/banner-slides/${filename}`,
+        `/api/storage-proxy/DEFAULT/banner-slides/${filename}`
+      ];
+    }
+    
+    // Test an image with all possible paths
+    function testImage(mediaUrl, containerId) {
+      const paths = generateAlternativePaths(mediaUrl);
+      const container = document.getElementById(containerId);
+      
+      const isVideo = mediaUrl && (
+        mediaUrl.endsWith('.mp4') || 
+        mediaUrl.endsWith('.webm') || 
+        mediaUrl.endsWith('.mov') || 
+        mediaUrl.endsWith('.ogg')
+      );
+      
+      const row = document.createElement('div');
+      row.className = 'image-row';
+      
+      paths.forEach((path, index) => {
+        const box = document.createElement('div');
+        box.className = 'image-box';
+        
+        const title = document.createElement('div');
+        title.className = 'image-title';
+        title.textContent = `Path ${index + 1}`;
+        
+        const frame = document.createElement('div');
+        frame.className = 'image-frame';
+        
+        const status = document.createElement('div');
+        status.className = 'status';
+        status.textContent = `Path: ${path}`;
+        
+        if (isVideo) {
+          const video = document.createElement('video');
+          video.muted = true;
+          video.controls = true;
+          video.src = path;
+          video.addEventListener('error', (event) => {
+            frame.innerHTML += '<p class="error">Error loading video</p>';
+          });
+          video.addEventListener('loadeddata', () => {
+            frame.innerHTML += '<p class="success">Video loaded successfully</p>';
+          });
+          frame.appendChild(video);
+        } else {
+          const img = document.createElement('img');
+          img.alt = 'Banner slide';
+          img.src = path;
+          img.addEventListener('error', () => {
+            frame.innerHTML += '<p class="error">Error loading image</p>';
+          });
+          img.addEventListener('load', () => {
+            frame.innerHTML += '<p class="success">Image loaded successfully</p>';
+          });
+          frame.appendChild(img);
+        }
+        
+        box.appendChild(title);
+        box.appendChild(frame);
+        box.appendChild(status);
+        
+        row.appendChild(box);
+      });
+      
+      container.appendChild(row);
+    }
+    
+    // Test all recently uploaded files from Object Storage
+    async function testObjectStorage() {
+      const container = document.getElementById('objectStorageTest');
+      container.innerHTML = '<p>Testing Object Storage...</p>';
+      
+      try {
+        const response = await fetch('/api/storage-browser');
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (!data.objects || data.objects.length === 0) {
+          container.innerHTML = '<p>No objects found in storage.</p>';
+          return;
+        }
+        
+        container.innerHTML = '';
+        
+        // Find banner slides bucket and files
+        const bannerObjects = data.objects.filter(obj => 
+          obj.key.includes('banner-slides') || 
+          obj.key.includes('bannerImage')
+        );
+        
+        if (bannerObjects.length === 0) {
+          container.innerHTML = '<p>No banner slide objects found in storage.</p>';
+          return;
+        }
+        
+        // Show most recent 3 objects
+        const recentObjects = bannerObjects.slice(0, 3);
+        
+        const row = document.createElement('div');
+        row.className = 'image-row';
+        
+        recentObjects.forEach((obj, index) => {
+          const box = document.createElement('div');
+          box.className = 'image-box';
+          
+          const title = document.createElement('div');
+          title.className = 'image-title';
+          title.textContent = `Object Storage Item ${index + 1}`;
+          
+          const frame = document.createElement('div');
+          frame.className = 'image-frame';
+          
+          const status = document.createElement('div');
+          status.className = 'status';
+          
+          const fullUrl = `https://object-storage.replit.app/${obj.bucket}/${obj.key}`;
+          const proxyUrl = `/api/storage-proxy/${obj.bucket}/${obj.key}`;
+          
+          status.innerHTML = `Bucket: ${obj.bucket}<br>Key: ${obj.key}<br>Size: ${obj.size} bytes`;
+          
+          const pre = document.createElement('pre');
+          pre.textContent = JSON.stringify(obj, null, 2);
+          
+          const isVideo = obj.key.endsWith('.mp4') || obj.key.endsWith('.webm') || 
+                          obj.key.endsWith('.mov') || obj.key.endsWith('.ogg');
+          
+          if (isVideo) {
+            const video = document.createElement('video');
+            video.muted = true;
+            video.controls = true;
+            video.src = proxyUrl;
+            video.addEventListener('error', () => {
+              frame.innerHTML += '<p class="error">Error loading video from proxy</p>';
+            });
+            video.addEventListener('loadeddata', () => {
+              frame.innerHTML += '<p class="success">Video loaded successfully from proxy</p>';
+            });
+            frame.appendChild(video);
+          } else {
+            const img = document.createElement('img');
+            img.alt = 'Storage object';
+            img.src = proxyUrl;
+            img.addEventListener('error', () => {
+              frame.innerHTML += '<p class="error">Error loading image from proxy</p>';
+            });
+            img.addEventListener('load', () => {
+              frame.innerHTML += '<p class="success">Image loaded successfully from proxy</p>';
+            });
+            frame.appendChild(img);
+          }
+          
+          box.appendChild(title);
+          box.appendChild(frame);
+          box.appendChild(status);
+          box.appendChild(pre);
+          
+          row.appendChild(box);
+        });
+        
+        container.appendChild(row);
+        
+      } catch (error) {
+        console.error('Error testing Object Storage:', error);
+        container.innerHTML = `<p class="error">Error testing Object Storage: ${error.message}</p>`;
+      }
+    }
+    
+    // Initialize the page
+    async function initPage() {
+      try {
+        // Fetch banner slides
+        const data = await fetchBannerSlides();
+        const recentSlides = data.bannerSlides?.slice(0, 3) || [];
+        
+        if (recentSlides.length === 0) {
+          document.getElementById('dynamicImages').innerHTML = '<p>No banner slides found.</p>';
+        } else {
+          document.getElementById('dynamicImages').innerHTML = '';
+          
+          // Test all recent slides
+          recentSlides.forEach((slide, index) => {
+            const containerId = `slide-${index}`;
+            const div = document.createElement('div');
+            div.id = containerId;
+            document.getElementById('dynamicImages').appendChild(div);
+            
+            // Show slide details
+            const details = document.createElement('div');
+            details.className = 'image-box';
+            details.innerHTML = `
+              <div class="image-title">Slide #${slide.id}</div>
+              <pre>${JSON.stringify(slide, null, 2)}</pre>
+            `;
+            div.appendChild(details);
+            
+            // Test the slide's media
+            testImage(slide.mediaUrl, containerId);
+          });
+        }
+        
+        // Test Object Storage
+        await testObjectStorage();
+        
+      } catch (error) {
+        console.error('Error initializing page:', error);
+      }
+    }
+    
+    // Set up event listeners
+    document.getElementById('clearCache').addEventListener('click', clearCache);
+    document.getElementById('reloadPage').addEventListener('click', () => window.location.reload());
+    document.getElementById('testAll').addEventListener('click', initPage);
+    
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', initPage);
+  </script>
+</body>
+</html>

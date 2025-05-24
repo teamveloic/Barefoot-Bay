@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Test Event</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .form-container {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 100px;
+    }
+    button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Create Test Event with Media</h1>
+  <p>This form creates a test event to verify that event media is properly stored and displayed.</p>
+
+  <div class="form-container">
+    <form id="eventForm" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="title">Event Title:</label>
+        <input type="text" id="title" name="title" value="Test Event for Media Storage" required>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea id="description" name="description">This is a test event to verify that the media storage and display functionality is working correctly in the application.</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="startDate">Start Date:</label>
+        <input type="datetime-local" id="startDate" name="startDate" required>
+      </div>
+
+      <div class="form-group">
+        <label for="endDate">End Date:</label>
+        <input type="datetime-local" id="endDate" name="endDate" required>
+      </div>
+
+      <div class="form-group">
+        <label for="location">Location:</label>
+        <input type="text" id="location" name="location" value="625 Barefoot Blvd, Barefoot Bay, FL, USA">
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category:</label>
+        <select id="category" name="category">
+          <option value="activity">Activity</option>
+          <option value="class">Class</option>
+          <option value="club">Club</option>
+          <option value="entertainment">Entertainment</option>
+          <option value="fitness">Fitness</option>
+          <option value="food">Food</option>
+          <option value="game">Game</option>
+          <option value="meeting">Meeting</option>
+          <option value="social" selected>Social</option>
+          <option value="special">Special</option>
+          <option value="sport">Sport</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="media">Event Image:</label>
+        <input type="file" id="media" name="media" accept="image/*">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="badgeRequired" name="badgeRequired" checked>
+          Badge Required
+        </label>
+      </div>
+
+      <button type="button" id="submitButton">Create Event</button>
+    </form>
+
+    <div id="result" class="result" style="display: none;">
+      <h3>Result:</h3>
+      <div id="resultContent"></div>
+      <div id="debugInfo" style="margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px;">
+        <h4>Debug Information:</h4>
+        <div id="debugContent" style="white-space: pre-wrap; font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 200px; overflow: auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-container">
+    <h2>Current Event</h2>
+    <div id="currentEvent">
+      <p>After creating an event, you can view it here.</p>
+    </div>
+  </div>
+
+  <script>
+    // Set default dates
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set start date to tomorrow at 2:00 PM
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(14, 0, 0, 0);
+      
+      // Set end date to tomorrow at 4:00 PM
+      const tomorrowEnd = new Date(tomorrow);
+      tomorrowEnd.setHours(16, 0, 0, 0);
+      
+      // Format dates for datetime-local input
+      const formatDate = (date) => {
+        return date.toISOString().slice(0, 16);
+      };
+      
+      document.getElementById('startDate').value = formatDate(tomorrow);
+      document.getElementById('endDate').value = formatDate(tomorrowEnd);
+    });
+    
+    // Handle form submission
+    document.getElementById('submitButton').addEventListener('click', async function() {
+      const resultDiv = document.getElementById('result');
+      const resultContent = document.getElementById('resultContent');
+      
+      // Show the result div
+      resultDiv.style.display = 'block';
+      resultContent.innerHTML = '<p>Submitting event...</p>';
+      
+      // Create FormData object
+      const formData = new FormData();
+      
+      // Create event data object with all required fields to match schema
+      const eventData = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        startDate: new Date(document.getElementById('startDate').value).toISOString(),
+        endDate: new Date(document.getElementById('endDate').value).toISOString(),
+        location: document.getElementById('location').value,
+        category: document.getElementById('category').value,
+        badgeRequired: document.getElementById('badgeRequired').checked,
+        // Add required fields to comply with schema validation
+        businessName: "Barefoot Bay Community",
+        contactInfo: {
+          name: "Test Contact",
+          email: "test@example.com"
+        },
+        isRecurring: false
+      };
+      
+      // Show debug info
+      document.getElementById('debugContent').innerHTML = `Event Data: ${JSON.stringify(eventData, null, 2)}`;
+      
+      
+      // Add event data as JSON string
+      formData.append('eventData', JSON.stringify(eventData));
+      
+      // Add image file if selected
+      const mediaFile = document.getElementById('media').files[0];
+      if (mediaFile) {
+        formData.append('media', mediaFile);
+      }
+      
+      try {
+        // Submit the form data
+        const response = await fetch('/api/events', {
+          method: 'POST',
+          body: formData,
+          // No Content-Type header needed as FormData handles it
+        });
+        
+        if (!response.ok) {
+          // Try to get detailed error message from response
+          let errorMessage = `HTTP error ${response.status}`;
+          try {
+            const errorData = await response.json();
+            if (errorData.message) {
+              errorMessage = `${errorMessage}: ${errorData.message}`;
+            }
+            if (errorData.errors) {
+              errorMessage = `${errorMessage}\nValidation errors: ${JSON.stringify(errorData.errors, null, 2)}`;
+            }
+          } catch (e) {
+            // If we can't parse the response as JSON, just use the status code
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const data = await response.json();
+        
+        // Display success message with event details
+        resultContent.innerHTML = `
+          <p class="success">Event created successfully!</p>
+          <p><strong>Event ID:</strong> ${data.id}</p>
+          <p><strong>Media URLs:</strong> ${JSON.stringify(data.mediaUrls || [])}</p>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+        
+        // Display created event
+        fetchAndDisplayEvent(data.id);
+      } catch (error) {
+        resultContent.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('debugContent').innerHTML += `\n\nError: ${error.message}`;
+      }
+    });
+    
+    // Fetch and display an event
+    async function fetchAndDisplayEvent(eventId) {
+      const eventContainer = document.getElementById('currentEvent');
+      
+      try {
+        const response = await fetch(`/api/events/${eventId}`);
+        
+        if (!response.ok) {
+          // Try to get detailed error message from response
+          let errorMessage = `HTTP error ${response.status}`;
+          try {
+            const errorData = await response.json();
+            if (errorData.message) {
+              errorMessage = `${errorMessage}: ${errorData.message}`;
+            }
+          } catch (e) {
+            // If we can't parse the response as JSON, just use the status code
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const event = await response.json();
+        
+        // Format dates for display
+        const formatDateTime = (isoString) => {
+          const date = new Date(isoString);
+          return date.toLocaleString();
+        };
+        
+        // Generate media HTML if available
+        let mediaHtml = '<p><em>No media for this event</em></p>';
+        if (event.mediaUrls && event.mediaUrls.length > 0) {
+          mediaHtml = event.mediaUrls.map(url => `
+            <div>
+              <p>${url}</p>
+              <img src="${url}" alt="Event image" style="max-width: 100%; max-height: 300px; margin: 10px 0;" 
+                   onerror="this.onerror=null; this.src='/public/default-event-image.svg'; this.nextElementSibling.style.display='block';">
+              <p style="display:none; color:red;">Error loading image - using fallback</p>
+            </div>
+          `).join('');
+        }
+        
+        // Display event details
+        eventContainer.innerHTML = `
+          <h3>${event.title}</h3>
+          <p><strong>ID:</strong> ${event.id}</p>
+          <p><strong>Category:</strong> ${event.category}</p>
+          <p><strong>Date:</strong> ${formatDateTime(event.startDate)} - ${formatDateTime(event.endDate)}</p>
+          <p><strong>Location:</strong> ${event.location}</p>
+          <p><strong>Description:</strong> ${event.description}</p>
+          <div>
+            <h4>Media:</h4>
+            ${mediaHtml}
+          </div>
+        `;
+      } catch (error) {
+        eventContainer.innerHTML = `<p class="error">Error fetching event: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

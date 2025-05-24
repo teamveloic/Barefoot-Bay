@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Upload Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-container {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 10px;
+      border: 1px solid #ddd;
+    }
+    .file-input {
+      margin: 10px 0;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f8f8f8;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .success {
+      background-color: #dff0d8;
+      border: 1px solid #d6e9c6;
+    }
+    .error {
+      background-color: #f2dede;
+      border: 1px solid #ebccd1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Media Upload Test Page</h1>
+  <p>This page tests different media upload endpoints to ensure files are correctly stored in both development and production locations.</p>
+  
+  <div class="test-container">
+    <h2>Emergency Single File Upload</h2>
+    <p>Tests the generic emergency upload endpoint.</p>
+    <div>
+      <label for="mediaType">Media Type:</label>
+      <select id="mediaType">
+        <option value="calendar">Calendar</option>
+        <option value="banner-slides">Banner Slides</option>
+        <option value="forum-media">Forum Media</option>
+        <option value="vendor-media">Vendor Media</option>
+        <option value="avatars">Avatars</option>
+      </select>
+    </div>
+    <div class="file-input">
+      <input type="file" id="singleFile" accept="image/*,video/*">
+    </div>
+    <button onclick="testSingleUpload()">Upload File</button>
+    <div id="singleUploadResult" class="result"></div>
+    <div id="singleUploadImage"></div>
+  </div>
+
+  <div class="test-container">
+    <h2>Banner Slide Upload</h2>
+    <p>Tests the banner slide upload endpoint.</p>
+    <div class="file-input">
+      <input type="file" id="bannerFile" accept="image/*">
+    </div>
+    <button onclick="testBannerUpload()">Upload Banner</button>
+    <div id="bannerUploadResult" class="result"></div>
+    <div id="bannerUploadImage"></div>
+  </div>
+
+  <div class="test-container">
+    <h2>Calendar Event Media Upload</h2>
+    <p>Tests the calendar event media upload endpoint.</p>
+    <div class="file-input">
+      <input type="file" id="calendarFile" accept="image/*,video/*">
+    </div>
+    <button onclick="testCalendarUpload()">Upload Calendar Media</button>
+    <div id="calendarUploadResult" class="result"></div>
+    <div id="calendarUploadImage"></div>
+  </div>
+
+  <div class="test-container">
+    <h2>Multiple Files Upload</h2>
+    <p>Tests uploading multiple files at once.</p>
+    <div>
+      <label for="multiMediaType">Media Type:</label>
+      <select id="multiMediaType">
+        <option value="calendar">Calendar</option>
+        <option value="forum-media">Forum Media</option>
+        <option value="vendor-media">Vendor Media</option>
+      </select>
+    </div>
+    <div class="file-input">
+      <input type="file" id="multipleFiles" accept="image/*,video/*" multiple>
+    </div>
+    <button onclick="testMultipleUpload()">Upload Multiple Files</button>
+    <div id="multipleUploadResult" class="result"></div>
+    <div id="multipleUploadImages"></div>
+  </div>
+
+  <div class="test-container">
+    <h2>Path Test</h2>
+    <p>Check if a file is accessible via both development and production paths.</p>
+    <input type="text" id="testPath" placeholder="Enter file path (e.g., /calendar/media-123456.jpg)" style="width: 300px;">
+    <button onclick="testPath()">Test Path</button>
+    <div id="pathTestResult" class="result"></div>
+    <div id="pathTestImages"></div>
+  </div>
+
+  <script>
+    // Single file upload test
+    async function testSingleUpload() {
+      const fileInput = document.getElementById('singleFile');
+      const mediaType = document.getElementById('mediaType').value;
+      const resultDiv = document.getElementById('singleUploadResult');
+      const imageDiv = document.getElementById('singleUploadImage');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.innerHTML = 'Please select a file first.';
+        resultDiv.className = 'result error';
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        
+        const response = await fetch(`/api/emergency-upload?mediaType=${mediaType}`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        resultDiv.innerHTML = JSON.stringify(result, null, 2);
+        
+        if (result.success) {
+          resultDiv.className = 'result success';
+          
+          // Display the uploaded image with both production and development URLs
+          if (fileInput.files[0].type.startsWith('image/')) {
+            imageDiv.innerHTML = `
+              <p>Production URL (/${mediaType}/...):</p>
+              <img src="${result.file.productionUrl}" alt="Uploaded image (production path)">
+              <p>Development URL (/uploads/${mediaType}/...):</p>
+              <img src="${result.file.developmentUrl}" alt="Uploaded image (development path)">
+            `;
+          } else if (fileInput.files[0].type.startsWith('video/')) {
+            imageDiv.innerHTML = `
+              <p>Production URL (/${mediaType}/...):</p>
+              <video src="${result.file.productionUrl}" controls style="max-width: 100%"></video>
+              <p>Development URL (/uploads/${mediaType}/...):</p>
+              <video src="${result.file.developmentUrl}" controls style="max-width: 100%"></video>
+            `;
+          }
+        } else {
+          resultDiv.className = 'result error';
+          imageDiv.innerHTML = '';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `Error: ${error.message}`;
+        resultDiv.className = 'result error';
+        imageDiv.innerHTML = '';
+      }
+    }
+    
+    // Banner upload test
+    async function testBannerUpload() {
+      const fileInput = document.getElementById('bannerFile');
+      const resultDiv = document.getElementById('bannerUploadResult');
+      const imageDiv = document.getElementById('bannerUploadImage');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.innerHTML = 'Please select a banner image first.';
+        resultDiv.className = 'result error';
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('bannerImage', fileInput.files[0]);
+        
+        const response = await fetch('/api/emergency-banner-upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        resultDiv.innerHTML = JSON.stringify(result, null, 2);
+        
+        if (result.success) {
+          resultDiv.className = 'result success';
+          
+          // Display the uploaded banner with both production and development URLs
+          imageDiv.innerHTML = `
+            <p>Production URL (/banner-slides/...):</p>
+            <img src="${result.productionUrl}" alt="Uploaded banner (production path)">
+            <p>Development URL (/uploads/banner-slides/...):</p>
+            <img src="${result.developmentUrl}" alt="Uploaded banner (development path)">
+          `;
+        } else {
+          resultDiv.className = 'result error';
+          imageDiv.innerHTML = '';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `Error: ${error.message}`;
+        resultDiv.className = 'result error';
+        imageDiv.innerHTML = '';
+      }
+    }
+    
+    // Calendar upload test
+    async function testCalendarUpload() {
+      const fileInput = document.getElementById('calendarFile');
+      const resultDiv = document.getElementById('calendarUploadResult');
+      const imageDiv = document.getElementById('calendarUploadImage');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.innerHTML = 'Please select a calendar media file first.';
+        resultDiv.className = 'result error';
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('media', fileInput.files[0]);
+        
+        const response = await fetch('/api/emergency-calendar-upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        resultDiv.innerHTML = JSON.stringify(result, null, 2);
+        
+        if (result.success) {
+          resultDiv.className = 'result success';
+          
+          // Display the uploaded media with both production and development URLs
+          if (fileInput.files[0].type.startsWith('image/')) {
+            imageDiv.innerHTML = `
+              <p>Production URL (/calendar/...):</p>
+              <img src="${result.productionUrl}" alt="Uploaded calendar media (production path)">
+              <p>Development URL (/uploads/calendar/...):</p>
+              <img src="${result.developmentUrl}" alt="Uploaded calendar media (development path)">
+            `;
+          } else if (fileInput.files[0].type.startsWith('video/')) {
+            imageDiv.innerHTML = `
+              <p>Production URL (/calendar/...):</p>
+              <video src="${result.productionUrl}" controls style="max-width: 100%"></video>
+              <p>Development URL (/uploads/calendar/...):</p>
+              <video src="${result.developmentUrl}" controls style="max-width: 100%"></video>
+            `;
+          }
+        } else {
+          resultDiv.className = 'result error';
+          imageDiv.innerHTML = '';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `Error: ${error.message}`;
+        resultDiv.className = 'result error';
+        imageDiv.innerHTML = '';
+      }
+    }
+    
+    // Multiple files upload test
+    async function testMultipleUpload() {
+      const fileInput = document.getElementById('multipleFiles');
+      const mediaType = document.getElementById('multiMediaType').value;
+      const resultDiv = document.getElementById('multipleUploadResult');
+      const imagesDiv = document.getElementById('multipleUploadImages');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.innerHTML = 'Please select files first.';
+        resultDiv.className = 'result error';
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        for (let i = 0; i < fileInput.files.length; i++) {
+          formData.append('files', fileInput.files[i]);
+        }
+        
+        const response = await fetch(`/api/emergency-upload-multiple?mediaType=${mediaType}`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        resultDiv.innerHTML = JSON.stringify(result, null, 2);
+        
+        if (result.success) {
+          resultDiv.className = 'result success';
+          
+          // Display all uploaded images
+          imagesDiv.innerHTML = '';
+          result.files.forEach(file => {
+            const isImage = file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+            const isVideo = file.originalname.match(/\.(mp4|webm|ogg|mov)$/i);
+            
+            if (isImage) {
+              imagesDiv.innerHTML += `
+                <div style="margin-bottom: 20px;">
+                  <p>File: ${file.originalname}</p>
+                  <p>Production URL (/${mediaType}/...):</p>
+                  <img src="${file.productionUrl}" alt="Uploaded image (production path)">
+                  <p>Development URL (/uploads/${mediaType}/...):</p>
+                  <img src="${file.developmentUrl}" alt="Uploaded image (development path)">
+                </div>
+              `;
+            } else if (isVideo) {
+              imagesDiv.innerHTML += `
+                <div style="margin-bottom: 20px;">
+                  <p>File: ${file.originalname}</p>
+                  <p>Production URL (/${mediaType}/...):</p>
+                  <video src="${file.productionUrl}" controls style="max-width: 100%"></video>
+                  <p>Development URL (/uploads/${mediaType}/...):</p>
+                  <video src="${file.developmentUrl}" controls style="max-width: 100%"></video>
+                </div>
+              `;
+            } else {
+              imagesDiv.innerHTML += `
+                <div style="margin-bottom: 20px;">
+                  <p>File: ${file.originalname}</p>
+                  <p>Production URL: ${file.productionUrl}</p>
+                  <p>Development URL: ${file.developmentUrl}</p>
+                </div>
+              `;
+            }
+          });
+        } else {
+          resultDiv.className = 'result error';
+          imagesDiv.innerHTML = '';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `Error: ${error.message}`;
+        resultDiv.className = 'result error';
+        imagesDiv.innerHTML = '';
+      }
+    }
+    
+    // Test if a path is accessible in both development and production forms
+    async function testPath() {
+      const pathInput = document.getElementById('testPath').value.trim();
+      const resultDiv = document.getElementById('pathTestResult');
+      const imagesDiv = document.getElementById('pathTestImages');
+      
+      if (!pathInput) {
+        resultDiv.innerHTML = 'Please enter a file path.';
+        resultDiv.className = 'result error';
+        return;
+      }
+      
+      // Derive the production and development paths
+      let prodPath = pathInput;
+      let devPath = pathInput;
+      
+      // If path starts with /uploads/, extract the production path
+      if (prodPath.startsWith('/uploads/')) {
+        prodPath = prodPath.replace(/^\/uploads\//, '/');
+      } 
+      // If path doesn't start with /uploads/ or /, add the leading slash
+      else if (!prodPath.startsWith('/')) {
+        prodPath = '/' + prodPath;
+      }
+      
+      // If path doesn't start with /uploads/, add it for dev path
+      if (!devPath.startsWith('/uploads/')) {
+        if (devPath.startsWith('/')) {
+          devPath = '/uploads' + devPath;
+        } else {
+          devPath = '/uploads/' + devPath;
+        }
+      }
+      
+      resultDiv.innerHTML = `Testing paths:
+- Production path: ${prodPath}
+- Development path: ${devPath}`;
+      
+      // Test if the paths are accessible
+      const isImage = pathInput.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+      const isVideo = pathInput.match(/\.(mp4|webm|ogg|mov)$/i);
+      
+      if (isImage) {
+        imagesDiv.innerHTML = `
+          <p>Production Path:</p>
+          <img src="${prodPath}" alt="Production path image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <p style="display: none; color: red;">Production path image failed to load!</p>
+          
+          <p>Development Path:</p>
+          <img src="${devPath}" alt="Development path image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <p style="display: none; color: red;">Development path image failed to load!</p>
+        `;
+      } else if (isVideo) {
+        imagesDiv.innerHTML = `
+          <p>Production Path:</p>
+          <video src="${prodPath}" controls style="max-width: 100%" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"></video>
+          <p style="display: none; color: red;">Production path video failed to load!</p>
+          
+          <p>Development Path:</p>
+          <video src="${devPath}" controls style="max-width: 100%" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"></video>
+          <p style="display: none; color: red;">Development path video failed to load!</p>
+        `;
+      } else {
+        imagesDiv.innerHTML = `
+          <p>This doesn't appear to be an image or video file. Cannot preview.</p>
+          <p>Check the network console for 404 errors to determine if the paths are accessible.</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

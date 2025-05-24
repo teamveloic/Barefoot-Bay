@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forum Media Upload Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .section {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    .result {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      max-height: 200px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+    .preview-image {
+      max-width: 300px;
+      max-height: 200px;
+      margin-top: 10px;
+    }
+    .url-list {
+      margin-top: 10px;
+    }
+    .url-list a {
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Forum Media Upload Test</h1>
+  <p>This page tests various methods of uploading forum media to Object Storage.</p>
+
+  <div class="container">
+    <div class="section">
+      <h2>Direct Upload to Object Storage</h2>
+      <p>Uses the /api/direct-upload endpoint to upload directly to Object Storage</p>
+      <input type="file" id="directUploadFile" accept="image/*">
+      <button id="directUploadBtn">Upload to Object Storage</button>
+      <div id="directUploadResult" class="result">Results will appear here...</div>
+      <div id="directUploadPreview"></div>
+    </div>
+
+    <div class="section">
+      <h2>Forum Media Test</h2>
+      <p>Uses the /api/forum-media-test endpoint specifically designed for forum media</p>
+      <input type="file" id="forumMediaFile" accept="image/*">
+      <button id="forumMediaBtn">Upload as Forum Media</button>
+      <div id="forumMediaResult" class="result">Results will appear here...</div>
+      <div id="forumMediaPreview"></div>
+    </div>
+
+    <div class="section">
+      <h2>Test URL Formats</h2>
+      <p>Test different URL formats for accessing forum media</p>
+      <input type="text" id="filenameInput" placeholder="Enter filename (e.g., image.jpg)">
+      <button id="testUrlsBtn">Generate Test URLs</button>
+      <div id="urlResult" class="result">URLs will appear here...</div>
+      <div id="urlPreview" class="url-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // Direct Upload to Object Storage
+    document.getElementById('directUploadBtn').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('directUploadResult');
+      const previewDiv = document.getElementById('directUploadPreview');
+      const fileInput = document.getElementById('directUploadFile');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.textContent = 'Please select a file first.';
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      resultDiv.textContent = 'Uploading...';
+      previewDiv.innerHTML = '';
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('mediaType', 'forum-media');
+        formData.append('section', 'forum');
+        
+        const response = await fetch('/api/direct-upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success && data.urls) {
+          // Create image preview
+          const img = document.createElement('img');
+          img.src = data.urls.proxy;
+          img.alt = 'Uploaded image';
+          img.className = 'preview-image';
+          
+          previewDiv.appendChild(img);
+          
+          // Add URL links
+          const urlList = document.createElement('div');
+          urlList.className = 'url-list';
+          
+          for (const [type, url] of Object.entries(data.urls)) {
+            if (typeof url === 'string') {
+              const link = document.createElement('a');
+              link.href = url;
+              link.textContent = `${type}: ${url}`;
+              link.target = '_blank';
+              urlList.appendChild(link);
+            }
+          }
+          
+          previewDiv.appendChild(urlList);
+        }
+      } catch (error) {
+        resultDiv.textContent = `Error: ${error.message}`;
+      }
+    });
+    
+    // Forum Media Test
+    document.getElementById('forumMediaBtn').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('forumMediaResult');
+      const previewDiv = document.getElementById('forumMediaPreview');
+      const fileInput = document.getElementById('forumMediaFile');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.textContent = 'Please select a file first.';
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      resultDiv.textContent = 'Uploading...';
+      previewDiv.innerHTML = '';
+      
+      try {
+        const formData = new FormData();
+        formData.append('mediaFile', file);
+        
+        const response = await fetch('/api/forum-media-test', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success && data.urls) {
+          // Create image preview
+          const img = document.createElement('img');
+          img.src = data.urls.proxy || data.urls.direct || data.url;
+          img.alt = 'Uploaded image';
+          img.className = 'preview-image';
+          
+          previewDiv.appendChild(img);
+          
+          // Add URL links
+          const urlList = document.createElement('div');
+          urlList.className = 'url-list';
+          
+          const urlsToDisplay = data.urls || { url: data.url };
+          
+          for (const [type, url] of Object.entries(urlsToDisplay)) {
+            if (typeof url === 'string') {
+              const link = document.createElement('a');
+              link.href = url;
+              link.textContent = `${type}: ${url}`;
+              link.target = '_blank';
+              urlList.appendChild(link);
+            }
+          }
+          
+          previewDiv.appendChild(urlList);
+        }
+      } catch (error) {
+        resultDiv.textContent = `Error: ${error.message}`;
+      }
+    });
+    
+    // Test URL Formats
+    document.getElementById('testUrlsBtn').addEventListener('click', () => {
+      const filenameInput = document.getElementById('filenameInput');
+      const resultDiv = document.getElementById('urlResult');
+      const previewDiv = document.getElementById('urlPreview');
+      
+      const filename = filenameInput.value.trim();
+      if (!filename) {
+        resultDiv.textContent = 'Please enter a filename.';
+        return;
+      }
+      
+      const bucket = 'FORUM';
+      const key = `forum/${filename}`;
+      
+      const urlFormats = {
+        direct: `https://object-storage.replit.app/${bucket}/${key}`,
+        proxy: `/api/storage-proxy/${bucket}/${key}`,
+        directForum: `/api/storage-proxy/direct-forum/${filename}`,
+        legacyFormat1: `/uploads/forum-media/${filename}`,
+        legacyFormat2: `/forum-media/${filename}`,
+        legacyFormat3: `/forum/${filename}`
+      };
+      
+      resultDiv.textContent = JSON.stringify(urlFormats, null, 2);
+      previewDiv.innerHTML = '';
+      
+      for (const [type, url] of Object.entries(urlFormats)) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.textContent = `${type}: ${url}`;
+        link.target = '_blank';
+        previewDiv.appendChild(link);
+      }
+    });
+  </script>
+</body>
+</html>

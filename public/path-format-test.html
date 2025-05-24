@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Object Storage Path Format Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .test-image {
+      max-width: 300px;
+      border: 1px solid #eee;
+      margin: 10px 0;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 3px;
+      white-space: pre-wrap;
+    }
+    h1 {
+      color: #333;
+    }
+    h2 {
+      color: #555;
+      margin-top: 0;
+    }
+    button {
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Object Storage Path Format Test</h1>
+  <p>This page tests the three different URL patterns for accessing media through the storage proxy.</p>
+
+  <div class="test-section">
+    <h2>1. Standard Format</h2>
+    <p><code>/api/storage-proxy/CALENDAR/events/filename.jpg</code></p>
+    <div>
+      <img id="standard-image" class="test-image" src="/api/storage-proxy/CALENDAR/events/media-1745826630031-877799657.png" alt="Standard format test">
+    </div>
+    <div id="standard-result" class="result">Testing...</div>
+    <button onclick="testImage('standard-image', 'standard-result')">Test Standard Format</button>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Double Bucket Format</h2>
+    <p><code>/api/storage-proxy/CALENDAR/CALENDAR/events/filename.jpg</code></p>
+    <div>
+      <img id="double-image" class="test-image" src="/api/storage-proxy/CALENDAR/CALENDAR/events/media-1745826630031-877799657.png" alt="Double bucket format test">
+    </div>
+    <div id="double-result" class="result">Testing...</div>
+    <button onclick="testImage('double-image', 'double-result')">Test Double Bucket Format</button>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Missing Bucket Format</h2>
+    <p><code>/api/storage-proxy/events/filename.jpg</code></p>
+    <div>
+      <img id="missing-image" class="test-image" src="/api/storage-proxy/events/media-1745826630031-877799657.png" alt="Missing bucket format test">
+    </div>
+    <div id="missing-result" class="result">Testing...</div>
+    <button onclick="testImage('missing-image', 'missing-result')">Test Missing Bucket Format</button>
+  </div>
+
+  <script>
+    // Test each image when page loads
+    window.onload = function() {
+      testImage('standard-image', 'standard-result');
+      testImage('double-image', 'double-result');
+      testImage('missing-image', 'missing-result');
+    };
+
+    // Function to test an image and display results
+    function testImage(imageId, resultId) {
+      const img = document.getElementById(imageId);
+      const result = document.getElementById(resultId);
+      
+      result.textContent = "Testing...";
+      
+      // Create a new image object to test loading
+      const testImg = new Image();
+      testImg.onload = function() {
+        // Successfully loaded
+        result.textContent = "✅ Success: Image loaded successfully\n";
+        result.textContent += `Size: ${this.naturalWidth}x${this.naturalHeight}\n`;
+        
+        // Check headers with fetch
+        fetchImageHeaders(img.src, resultId);
+      };
+      
+      testImg.onerror = function() {
+        // Failed to load
+        result.textContent = "❌ Error: Failed to load image\n";
+        result.textContent += "Checking response headers...\n";
+        
+        // Check headers with fetch
+        fetchImageHeaders(img.src, resultId);
+      };
+      
+      // Start loading the image
+      testImg.src = img.src;
+    }
+    
+    // Function to fetch image headers and append to result
+    function fetchImageHeaders(url, resultId) {
+      const result = document.getElementById(resultId);
+      
+      fetch(url, { method: 'HEAD' })
+        .then(response => {
+          result.textContent += `Status: ${response.status} ${response.statusText}\n`;
+          
+          // Check if this is the default image
+          const isDefault = response.headers.get('x-default-event-image');
+          if (isDefault) {
+            result.textContent += "⚠️ Using default event image\n";
+          }
+          
+          // Display important headers
+          result.textContent += `Content-Type: ${response.headers.get('content-type')}\n`;
+          result.textContent += `Cache-Control: ${response.headers.get('cache-control')}\n`;
+          
+          // Check for redirects
+          if (response.redirected) {
+            result.textContent += `⚠️ Redirected to: ${response.url}\n`;
+          }
+        })
+        .catch(error => {
+          result.textContent += `Error checking headers: ${error.message}\n`;
+        });
+    }
+  </script>
+</body>
+</html>

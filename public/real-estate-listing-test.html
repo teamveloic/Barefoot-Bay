@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Listing Creation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #336699;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        input[type="file"] {
+            padding: 0;
+        }
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 5px;
+        }
+        button {
+            background-color: #336699;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background-color: #f8f8f8;
+            white-space: pre-wrap;
+        }
+        .img-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real Estate Listing Creation Test</h1>
+    <p>This page tests the real estate listing creation endpoint with Object Storage media integration.</p>
+
+    <form id="listing-form">
+        <div class="form-group">
+            <label for="title">Listing Title:</label>
+            <input type="text" id="title" name="title" required value="Test Listing">
+        </div>
+
+        <div class="form-group">
+            <label for="price">Price:</label>
+            <input type="number" id="price" name="price" required value="350000">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" rows="4" required>Beautiful home in Barefoot Bay. This is a test listing created to verify Object Storage media upload functionality.</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="bedrooms">Bedrooms:</label>
+            <input type="number" id="bedrooms" name="bedrooms" required value="3">
+        </div>
+
+        <div class="form-group">
+            <label for="bathrooms">Bathrooms:</label>
+            <input type="number" id="bathrooms" name="bathrooms" required value="2">
+        </div>
+
+        <div class="form-group">
+            <label for="address">Address:</label>
+            <input type="text" id="address" name="address" required value="123 Barefoot Blvd, Barefoot Bay, FL 32976">
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" name="status" required>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="sold">Sold</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="propertyType">Property Type:</label>
+            <select id="propertyType" name="propertyType" required>
+                <option value="single-family">Single Family</option>
+                <option value="condo">Condo</option>
+                <option value="townhouse">Townhouse</option>
+                <option value="mobile">Mobile Home</option>
+                <option value="land">Land</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="sqft">Square Footage:</label>
+            <input type="number" id="sqft" name="sqft" required value="1800">
+        </div>
+
+        <div class="form-group">
+            <label for="lotSize">Lot Size:</label>
+            <input type="text" id="lotSize" name="lotSize" required value="0.25 acres">
+        </div>
+
+        <div class="form-group">
+            <label for="yearBuilt">Year Built:</label>
+            <input type="number" id="yearBuilt" name="yearBuilt" required value="1985">
+        </div>
+
+        <div class="form-group">
+            <label for="featured">Featured:</label>
+            <input type="checkbox" id="featured" name="featured">
+        </div>
+
+        <div class="form-group">
+            <label for="media-files">Property Images:</label>
+            <input type="file" id="media-files" multiple accept="image/*">
+        </div>
+
+        <button type="submit" id="submit-btn">Create Listing</button>
+    </form>
+
+    <div class="results" id="results">Results will appear here...</div>
+    
+    <h2>Created Listing Preview:</h2>
+    <div id="preview-container"></div>
+
+    <script>
+        document.getElementById('listing-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultArea = document.getElementById('results');
+            const previewContainer = document.getElementById('preview-container');
+            
+            resultArea.textContent = 'Creating listing...';
+            previewContainer.innerHTML = '';
+            
+            const formData = new FormData();
+            
+            // Add all form fields to FormData
+            formData.append('title', document.getElementById('title').value);
+            formData.append('price', document.getElementById('price').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('bedrooms', document.getElementById('bedrooms').value);
+            formData.append('bathrooms', document.getElementById('bathrooms').value);
+            formData.append('address', document.getElementById('address').value);
+            formData.append('status', document.getElementById('status').value);
+            formData.append('propertyType', document.getElementById('propertyType').value);
+            formData.append('sqft', document.getElementById('sqft').value);
+            formData.append('lotSize', document.getElementById('lotSize').value);
+            formData.append('yearBuilt', document.getElementById('yearBuilt').value);
+            formData.append('featured', document.getElementById('featured').checked);
+            
+            // Add files
+            const fileInput = document.getElementById('media-files');
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('media', fileInput.files[i]);
+            }
+            
+            try {
+                const response = await fetch('/api/listings', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                resultArea.textContent = JSON.stringify(data, null, 2);
+                
+                // Display created listing information if successful
+                if (data.id) {
+                    // Create listing details display
+                    const listingDetails = document.createElement('div');
+                    listingDetails.innerHTML = `
+                        <h3>${data.title}</h3>
+                        <p><strong>ID:</strong> ${data.id}</p>
+                        <p><strong>Price:</strong> $${data.price.toLocaleString()}</p>
+                        <p><strong>Address:</strong> ${data.address}</p>
+                        <p><strong>Created on:</strong> ${new Date(data.createdAt).toLocaleString()}</p>
+                    `;
+                    previewContainer.appendChild(listingDetails);
+                    
+                    // Display images if available
+                    if (data.mediaUrls && data.mediaUrls.length > 0) {
+                        const imagesContainer = document.createElement('div');
+                        imagesContainer.style.display = 'flex';
+                        imagesContainer.style.flexWrap = 'wrap';
+                        
+                        data.mediaUrls.forEach(url => {
+                            const img = document.createElement('img');
+                            img.src = url;
+                            img.className = 'img-preview';
+                            img.alt = 'Property image';
+                            imagesContainer.appendChild(img);
+                        });
+                        
+                        previewContainer.appendChild(imagesContainer);
+                    }
+                }
+            } catch (error) {
+                resultArea.textContent = 'Error creating listing: ' + error.message;
+                console.error('API error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

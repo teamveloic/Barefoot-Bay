@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barefoot Bay Media Debugger</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #0066cc;
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .test-item {
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background: white;
+        }
+        .test-item img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 10px;
+            border: 1px dashed #ccc;
+        }
+        .image-info {
+            font-size: 12px;
+            color: #666;
+            word-break: break-all;
+        }
+        .status {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .success {
+            color: green;
+        }
+        .failed {
+            color: red;
+        }
+        .test-form {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f8ff;
+            border-radius: 5px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0055aa;
+        }
+        .error-details {
+            margin-top: 10px;
+            color: #d32f2f;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Barefoot Bay Media Debugger</h1>
+    <p>This tool helps diagnose media loading issues by testing different URL formats.</p>
+    
+    <div class="test-form">
+        <h3>Test a Specific Image URL</h3>
+        <input type="text" id="custom-image-url" placeholder="Enter image URL to test (e.g., /uploads/calendar/image.jpg)" style="width: 80%;">
+        <button onclick="testCustomImage()">Test</button>
+        <div id="custom-test-result"></div>
+    </div>
+
+    <h2>1. Calendar Event Images</h2>
+    <div class="test-section">
+        <p>Testing different path formats for calendar event images:</p>
+        <div class="test-grid" id="calendar-tests"></div>
+    </div>
+
+    <h2>2. Banner Images</h2>
+    <div class="test-section">
+        <p>Testing different path formats for banner images:</p>
+        <div class="test-grid" id="banner-tests"></div>
+    </div>
+
+    <h2>3. Avatar Images</h2>
+    <div class="test-section">
+        <p>Testing different path formats for user avatars:</p>
+        <div class="test-grid" id="avatar-tests"></div>
+    </div>
+
+    <h2>4. Media Service</h2>
+    <div class="test-section">
+        <p>Testing the central media service for various file types:</p>
+        <div class="test-grid" id="media-service-tests"></div>
+    </div>
+
+    <h2>Technical Information</h2>
+    <div class="test-section">
+        <p><strong>User Agent:</strong> <span id="user-agent"></span></p>
+        <p><strong>Current Host:</strong> <span id="current-host"></span></p>
+        <p><strong>Is Production:</strong> <span id="is-production"></span></p>
+    </div>
+
+    <script>
+        // Fill in technical information
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        document.getElementById('current-host').textContent = window.location.host;
+        document.getElementById('is-production').textContent = window.location.host.includes('barefootbay.com') ? 'Yes' : 'No';
+
+        // Helper to create test image elements
+        function createImageTest(containerId, imagePath, description) {
+            const container = document.getElementById(containerId);
+            
+            const testItem = document.createElement('div');
+            testItem.className = 'test-item';
+            
+            const img = document.createElement('img');
+            img.src = imagePath;
+            img.alt = 'Test image';
+            img.loading = 'lazy';
+            
+            const info = document.createElement('div');
+            info.className = 'image-info';
+            info.textContent = imagePath;
+            
+            const desc = document.createElement('div');
+            desc.textContent = description;
+            
+            const status = document.createElement('div');
+            status.className = 'status';
+            status.innerHTML = '<span class="loading">Loading...</span>';
+            
+            testItem.appendChild(img);
+            testItem.appendChild(info);
+            testItem.appendChild(desc);
+            testItem.appendChild(status);
+            
+            container.appendChild(testItem);
+            
+            // Add event listeners to track load status
+            img.onload = function() {
+                status.innerHTML = '<span class="success">Loaded ✓</span>';
+            };
+            
+            img.onerror = function() {
+                status.innerHTML = '<span class="failed">Failed ✗</span>';
+                
+                // Try to get more details about why it failed
+                const errorDetails = document.createElement('div');
+                errorDetails.className = 'error-details';
+                
+                // Try a fetch to get more information
+                fetch(imagePath)
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(`${response.status} ${response.statusText}: ${text}`);
+                            });
+                        }
+                        return 'Fetch succeeded but image failed to load';
+                    })
+                    .catch(error => {
+                        errorDetails.textContent = `Error: ${error.message}`;
+                    });
+                
+                status.appendChild(errorDetails);
+            };
+        }
+
+        // Test custom image URL
+        function testCustomImage() {
+            const customUrl = document.getElementById('custom-image-url').value.trim();
+            if (!customUrl) {
+                alert('Please enter an image URL');
+                return;
+            }
+            
+            // Clear previous results
+            const resultContainer = document.getElementById('custom-test-result');
+            resultContainer.innerHTML = '';
+            
+            // Create a test item
+            const testItem = document.createElement('div');
+            testItem.className = 'test-item';
+            
+            const img = document.createElement('img');
+            img.src = customUrl;
+            img.alt = 'Custom test image';
+            
+            const info = document.createElement('div');
+            info.className = 'image-info';
+            info.textContent = customUrl;
+            
+            const status = document.createElement('div');
+            status.className = 'status';
+            status.innerHTML = '<span class="loading">Loading...</span>';
+            
+            testItem.appendChild(img);
+            testItem.appendChild(info);
+            testItem.appendChild(status);
+            
+            resultContainer.appendChild(testItem);
+            
+            // Add event listeners
+            img.onload = function() {
+                status.innerHTML = '<span class="success">Loaded ✓</span>';
+            };
+            
+            img.onerror = function() {
+                status.innerHTML = '<span class="failed">Failed ✗</span>';
+                
+                // Try to get more details
+                const errorDetails = document.createElement('div');
+                errorDetails.className = 'error-details';
+                
+                fetch(customUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(`${response.status} ${response.statusText}: ${text}`);
+                            });
+                        }
+                        return 'Fetch succeeded but image failed to load';
+                    })
+                    .catch(error => {
+                        errorDetails.textContent = `Error: ${error.message}`;
+                    });
+                
+                status.appendChild(errorDetails);
+            };
+        }
+
+        // Define test cases
+        const calendarTests = [
+            { path: '/uploads/calendar/media-1234567890.jpg', desc: 'Development path with /uploads/' },
+            { path: '/calendar/media-1234567890.jpg', desc: 'Production path without /uploads/' },
+            { path: '/uploads/media-1234567890.jpg', desc: 'Development path without category' },
+            { path: '/media/media-1234567890.jpg', desc: 'Media service fallback' }
+        ];
+
+        const bannerTests = [
+            { path: '/uploads/banner-slides/bannerImage-1234567890.jpg', desc: 'Development path with /uploads/' },
+            { path: '/banner-slides/bannerImage-1234567890.jpg', desc: 'Production path without /uploads/' },
+            { path: '/uploads/bannerImage-1234567890.jpg', desc: 'Development path without category' },
+            { path: '/media/bannerImage-1234567890.jpg', desc: 'Media service fallback' }
+        ];
+
+        const avatarTests = [
+            { path: '/uploads/avatars/avatar-1234567890.jpg', desc: 'Development path with /uploads/' },
+            { path: '/avatars/avatar-1234567890.jpg', desc: 'Production path without /uploads/' },
+            { path: '/uploads/avatar-1234567890.jpg', desc: 'Development path without category' },
+            { path: '/media/avatar-1234567890.jpg', desc: 'Media service fallback' }
+        ];
+
+        const mediaServiceTests = [
+            { path: '/media/media-1234567890.jpg', desc: 'Media service with jpg' },
+            { path: '/media/media-1234567890.png', desc: 'Media service with png' },
+            { path: '/media/bannerImage-1234567890.jpg', desc: 'Media service for banner' },
+            { path: '/media/avatar-1234567890.png', desc: 'Media service for avatar' }
+        ];
+
+        // Create test elements
+        calendarTests.forEach(test => {
+            createImageTest('calendar-tests', test.path, test.desc);
+        });
+
+        bannerTests.forEach(test => {
+            createImageTest('banner-tests', test.path, test.desc);
+        });
+
+        avatarTests.forEach(test => {
+            createImageTest('avatar-tests', test.path, test.desc);
+        });
+
+        mediaServiceTests.forEach(test => {
+            createImageTest('media-service-tests', test.path, test.desc);
+        });
+    </script>
+</body>
+</html>

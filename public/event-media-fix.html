@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Media Fix Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        .sample-urls {
+            margin-bottom: 20px;
+        }
+        .url-list {
+            list-style: none;
+            padding: 0;
+        }
+        .url-list li {
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .progress-bar-inner {
+            height: 100%;
+            background-color: #2ecc71;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .file-upload {
+            margin-bottom: 20px;
+        }
+        #test-result {
+            display: none;
+        }
+        .media-preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Event Media Fix Tool</h1>
+    <p>
+        This tool helps diagnose and fix issues with event media in the Barefoot Bay community platform.
+        Use the buttons below to check the status of event media URLs and fix any issues.
+    </p>
+
+    <div class="card">
+        <h2>1. Test Upload</h2>
+        <p>
+            Upload a test image to check the event media upload process.
+            This will help determine if the upload process is working correctly.
+        </p>
+        <div class="file-upload">
+            <input type="file" id="test-file" accept="image/*">
+            <button onclick="testUpload()">Upload Test Image</button>
+        </div>
+        <div id="test-result" class="card">
+            <h3>Test Results:</h3>
+            <div id="test-output"></div>
+            <div id="test-media-preview"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>2. Check Event Media URLs</h2>
+        <p>
+            Check the format of media URLs used in existing events.
+            This will help identify if there are any issues with the URLs.
+        </p>
+        <button onclick="checkEventMediaUrls()">Check Event Media URLs</button>
+        <div id="check-progress" class="progress-bar">
+            <div id="check-progress-inner" class="progress-bar-inner"></div>
+        </div>
+        <div id="check-result"></div>
+    </div>
+
+    <div class="card">
+        <h2>3. Fix Event Media URLs</h2>
+        <p>
+            Update all event media URLs to use the correct format.
+            This will ensure all events use the proper URL format for accessing media.
+        </p>
+        <button onclick="fixEventMediaUrls()">Fix Event Media URLs</button>
+        <div id="fix-progress" class="progress-bar">
+            <div id="fix-progress-inner" class="progress-bar-inner"></div>
+        </div>
+        <div id="fix-result"></div>
+    </div>
+
+    <div class="card">
+        <h2>4. Upload Default Event Image</h2>
+        <p>
+            Upload a default event image to all necessary locations.
+            This image will be used as a fallback when an event's image is not available.
+        </p>
+        <button onclick="uploadDefaultImage()">Upload Default Event Image</button>
+        <div id="default-image-result"></div>
+    </div>
+
+    <script>
+        // Test uploading a file
+        async function testUpload() {
+            const fileInput = document.getElementById('test-file');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/api/test-event-media', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const resultElement = document.getElementById('test-result');
+                const outputElement = document.getElementById('test-output');
+                const previewElement = document.getElementById('test-media-preview');
+
+                resultElement.style.display = 'block';
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Create a formatted output
+                    let output = '<h4 class="success">Upload Successful!</h4>';
+                    output += '<table>';
+                    output += '<tr><th>Property</th><th>Value</th></tr>';
+                    output += `<tr><td>Original Filename</td><td>${data.originalFilename}</td></tr>`;
+                    output += `<tr><td>Generated Filename</td><td>${data.filename}</td></tr>`;
+                    output += `<tr><td>Object Storage URL</td><td>${data.objectStorageUrl}</td></tr>`;
+                    output += `<tr><td>Proxy URL</td><td>${data.proxyUrl}</td></tr>`;
+                    output += `<tr><td>Normalized URL</td><td>${data.normalizedUrl}</td></tr>`;
+                    output += '</table>';
+                    
+                    output += '<h4>Diagnostics:</h4>';
+                    output += '<table>';
+                    output += `<tr><td>Is Object Storage URL?</td><td>${data.diagnostics.isObjectStorageUrl ? 'Yes' : 'No'}</td></tr>`;
+                    output += `<tr><td>Is Proxy Format?</td><td>${data.diagnostics.isProxyFormat ? 'Yes' : 'No'}</td></tr>`;
+                    output += `<tr><td>Normalizes to Proxy?</td><td>${data.diagnostics.shouldNormalizeToProxy ? 'Yes' : 'No'}</td></tr>`;
+                    output += '</table>';
+                    
+                    output += '<h4>Path Components:</h4>';
+                    output += '<table>';
+                    output += `<tr><td>Bucket</td><td>${data.diagnostics.pathComponents.bucket}</td></tr>`;
+                    output += `<tr><td>Directory</td><td>${data.diagnostics.pathComponents.directory}</td></tr>`;
+                    output += `<tr><td>Filename</td><td>${data.diagnostics.pathComponents.filename}</td></tr>`;
+                    output += '</table>';
+                    
+                    outputElement.innerHTML = output;
+                    
+                    // Show image preview
+                    previewElement.innerHTML = `<h4>Image Preview:</h4>
+                        <img src="${data.proxyUrl}" class="media-preview" onerror="this.src='/default-event-image.svg';">`;
+                } else {
+                    const errorData = await response.json();
+                    outputElement.innerHTML = `<h4 class="error">Upload Failed</h4>
+                        <p>${errorData.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(errorData, null, 2)}</pre>`;
+                    previewElement.innerHTML = '';
+                }
+            } catch (error) {
+                document.getElementById('test-result').style.display = 'block';
+                document.getElementById('test-output').innerHTML = `<h4 class="error">Error</h4>
+                    <p>${error.message}</p>`;
+                document.getElementById('test-media-preview').innerHTML = '';
+            }
+        }
+
+        // Check event media URLs
+        async function checkEventMediaUrls() {
+            try {
+                // Show progress indicator
+                const progressBar = document.getElementById('check-progress-inner');
+                progressBar.style.width = '50%';
+                
+                const response = await fetch('/api/check-event-media-urls');
+                
+                // Complete progress
+                progressBar.style.width = '100%';
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Create stats display
+                    let statsHtml = '<h3>Event Media URL Statistics</h3>';
+                    statsHtml += '<div class="stats">';
+                    statsHtml += `<div class="stat-item"><strong>Total Events:</strong> ${data.totalEventsChecked}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Events With Media:</strong> ${data.eventsWithMedia}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Events Without Media:</strong> ${data.noMediaCount}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Proxy Format URLs:</strong> ${data.proxyFormatCount}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Direct Object Storage URLs:</strong> ${data.directObjectStorageCount}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Local Upload URLs:</strong> ${data.localUploadsCount}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Other Format URLs:</strong> ${data.otherFormatCount}</div>`;
+                    statsHtml += '</div>';
+                    
+                    // Add sample URLs
+                    if (data.sampleUrls && data.sampleUrls.length > 0) {
+                        statsHtml += '<div class="sample-urls">';
+                        statsHtml += '<h3>Sample URLs</h3>';
+                        statsHtml += '<ul class="url-list">';
+                        data.sampleUrls.forEach(url => {
+                            statsHtml += `<li>${url}</li>`;
+                        });
+                        statsHtml += '</ul>';
+                        statsHtml += '</div>';
+                    }
+                    
+                    document.getElementById('check-result').innerHTML = statsHtml;
+                } else {
+                    const errorData = await response.json();
+                    document.getElementById('check-result').innerHTML = `<h3 class="error">Error Checking URLs</h3>
+                        <p>${errorData.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(errorData, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                document.getElementById('check-result').innerHTML = `<h3 class="error">Error</h3>
+                    <p>${error.message}</p>`;
+            }
+        }
+
+        // Fix event media URLs
+        async function fixEventMediaUrls() {
+            if (!confirm('This will update all event media URLs to use the correct format. Continue?')) {
+                return;
+            }
+            
+            try {
+                // Show progress indicator
+                const progressBar = document.getElementById('fix-progress-inner');
+                progressBar.style.width = '50%';
+                
+                const response = await fetch('/api/fix-event-media-urls', {
+                    method: 'POST'
+                });
+                
+                // Complete progress
+                progressBar.style.width = '100%';
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Create stats display
+                    let statsHtml = '<h3 class="success">URL Fix Process Complete</h3>';
+                    statsHtml += '<div class="stats">';
+                    statsHtml += `<div class="stat-item"><strong>Events Checked:</strong> ${data.eventsChecked}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Events With Media:</strong> ${data.eventsWithMedia}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Events Updated:</strong> ${data.eventsUpdated}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>URLs Normalized:</strong> ${data.urlsNormalized}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>URLs Already Normalized:</strong> ${data.urlsPreNormalized}</div>`;
+                    statsHtml += `<div class="stat-item"><strong>Errors:</strong> ${data.errors}</div>`;
+                    statsHtml += '</div>';
+                    
+                    // Add details about normalized URLs if available
+                    if (data.normalizations && data.normalizations.length > 0) {
+                        statsHtml += '<h3>URL Normalizations</h3>';
+                        statsHtml += '<table>';
+                        statsHtml += '<tr><th>Event ID</th><th>Before</th><th>After</th></tr>';
+                        
+                        data.normalizations.forEach(norm => {
+                            statsHtml += `<tr>
+                                <td>${norm.eventId}</td>
+                                <td>${norm.before.join('<br>')}</td>
+                                <td>${norm.after.join('<br>')}</td>
+                            </tr>`;
+                        });
+                        
+                        statsHtml += '</table>';
+                    }
+                    
+                    // Add errors if any
+                    if (data.errors > 0 && data.eventsWithErrors && data.eventsWithErrors.length > 0) {
+                        statsHtml += `<h3 class="error">Events with Errors (${data.errors})</h3>`;
+                        statsHtml += '<ul>';
+                        data.eventsWithErrors.forEach(eventId => {
+                            statsHtml += `<li>Event ID: ${eventId}</li>`;
+                        });
+                        statsHtml += '</ul>';
+                    }
+                    
+                    document.getElementById('fix-result').innerHTML = statsHtml;
+                } else {
+                    const errorData = await response.json();
+                    document.getElementById('fix-result').innerHTML = `<h3 class="error">Error Fixing URLs</h3>
+                        <p>${errorData.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(errorData, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                document.getElementById('fix-result').innerHTML = `<h3 class="error">Error</h3>
+                    <p>${error.message}</p>`;
+            }
+        }
+
+        // Upload default event image
+        async function uploadDefaultImage() {
+            try {
+                const response = await fetch('/api/upload-default-event-image', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    let resultHtml = '<h3 class="success">Default Event Image Uploaded Successfully</h3>';
+                    resultHtml += `<p>Default Image URL: ${data.defaultImageUrl}</p>`;
+                    
+                    // Show image preview
+                    resultHtml += `<div>
+                        <h4>Image Preview:</h4>
+                        <img src="${data.defaultImageUrl}" class="media-preview" alt="Default Event Image">
+                    </div>`;
+                    
+                    // Show upload locations
+                    if (data.locations && data.locations.length > 0) {
+                        resultHtml += '<h4>Upload Locations:</h4>';
+                        resultHtml += '<table>';
+                        resultHtml += '<tr><th>Bucket</th><th>Path</th><th>Status</th></tr>';
+                        
+                        data.locations.forEach(location => {
+                            resultHtml += `<tr>
+                                <td>${location.bucket}</td>
+                                <td>${location.path}</td>
+                                <td>${location.success ? '<span class="success">Success</span>' : `<span class="error">Failed: ${location.error || 'Unknown error'}</span>`}</td>
+                            </tr>`;
+                        });
+                        
+                        resultHtml += '</table>';
+                    }
+                    
+                    document.getElementById('default-image-result').innerHTML = resultHtml;
+                } else {
+                    const errorData = await response.json();
+                    document.getElementById('default-image-result').innerHTML = `<h3 class="error">Error Uploading Default Image</h3>
+                        <p>${errorData.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(errorData, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                document.getElementById('default-image-result').innerHTML = `<h3 class="error">Error</h3>
+                    <p>${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

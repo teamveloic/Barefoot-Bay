@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forum Media Fallback Test</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      max-width: 960px; 
+      margin: 0 auto; 
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1, h2 { margin-top: 1.5em; }
+    .test-container {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    .test-image {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 10px 0;
+      border: 1px solid #eee;
+    }
+    .test-description {
+      font-style: italic;
+      margin-bottom: 10px;
+    }
+    .test-result {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f8f8f8;
+      border-radius: 3px;
+    }
+    .test-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .test-label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .test-url {
+      font-family: monospace;
+      word-break: break-all;
+      margin-top: 5px;
+      padding: 5px;
+      background-color: #f0f0f0;
+      border-radius: 3px;
+    }
+    .test-status {
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 12px;
+      color: white;
+    }
+    .pending { background-color: #f0ad4e; }
+    .success { background-color: #5cb85c; }
+    .failed { background-color: #d9534f; }
+  </style>
+</head>
+<body>
+  <h1>Forum Media Fallback Test</h1>
+  <p>This page tests the forum media fallback mechanisms. It attempts to load forum media from various paths, including invalid paths, to verify that fallback placeholders are correctly served.</p>
+
+  <h2>Direct Forum Media Tests</h2>
+  
+  <div class="test-container">
+    <div class="test-header">
+      <span class="test-label">Test 1: Nonexistent Forum Image via Direct Path</span>
+      <span class="test-status pending" id="status1">Pending</span>
+    </div>
+    <div class="test-description">Tests a direct path to a nonexistent forum image. Should fall back to the default forum image.</div>
+    <div class="test-url">/forum-media/nonexistent-image.jpg</div>
+    <img src="/forum-media/nonexistent-image.jpg" class="test-image" id="img1" onerror="this.dataset.error='true'; updateStatus('status1', 'failed');" onload="updateStatus('status1', 'success');">
+    <div class="test-result" id="result1"></div>
+  </div>
+
+  <div class="test-container">
+    <div class="test-header">
+      <span class="test-label">Test 2: Nonexistent Forum Image via Uploads Path</span>
+      <span class="test-status pending" id="status2">Pending</span>
+    </div>
+    <div class="test-description">Tests an upload path to a nonexistent forum image. Should fall back to the default forum image.</div>
+    <div class="test-url">/uploads/forum-media/nonexistent-image.jpg</div>
+    <img src="/uploads/forum-media/nonexistent-image.jpg" class="test-image" id="img2" onerror="this.dataset.error='true'; updateStatus('status2', 'failed');" onload="updateStatus('status2', 'success');">
+    <div class="test-result" id="result2"></div>
+  </div>
+
+  <h2>Object Storage Proxy Tests</h2>
+  
+  <div class="test-container">
+    <div class="test-header">
+      <span class="test-label">Test 3: Nonexistent Forum Image via Object Storage Proxy</span>
+      <span class="test-status pending" id="status3">Pending</span>
+    </div>
+    <div class="test-description">Tests accessing a nonexistent forum image through the storage proxy. Should serve the fallback image.</div>
+    <div class="test-url">/api/storage-proxy/FORUM/forum/nonexistent-image.jpg</div>
+    <img src="/api/storage-proxy/FORUM/forum/nonexistent-image.jpg" class="test-image" id="img3" onerror="this.dataset.error='true'; updateStatus('status3', 'failed');" onload="updateStatus('status3', 'success');">
+    <div class="test-result" id="result3"></div>
+  </div>
+
+  <div class="test-container">
+    <div class="test-header">
+      <span class="test-label">Test 4: Default Forum Image from Media Placeholder Directory</span>
+      <span class="test-status pending" id="status4">Pending</span>
+    </div>
+    <div class="test-description">Tests direct access to the default forum image placeholder.</div>
+    <div class="test-url">/media-placeholder/default-forum-image.svg</div>
+    <img src="/media-placeholder/default-forum-image.svg" class="test-image" id="img4" onerror="this.dataset.error='true'; updateStatus('status4', 'failed');" onload="updateStatus('status4', 'success');">
+    <div class="test-result" id="result4"></div>
+  </div>
+
+  <div class="test-container">
+    <div class="test-header">
+      <span class="test-label">Test 5: Forum Placeholder from Media Placeholder Directory</span>
+      <span class="test-status pending" id="status5">Pending</span>
+    </div>
+    <div class="test-description">Tests direct access to the forum placeholder SVG.</div>
+    <div class="test-url">/media-placeholder/forum-placeholder.svg</div>
+    <img src="/media-placeholder/forum-placeholder.svg" class="test-image" id="img5" onerror="this.dataset.error='true'; updateStatus('status5', 'failed');" onload="updateStatus('status5', 'success');">
+    <div class="test-result" id="result5"></div>
+  </div>
+
+  <div class="test-container">
+    <div class="test-header">
+      <span class="test-label">Test 6: Forum Comment Placeholder from Media Placeholder Directory</span>
+      <span class="test-status pending" id="status6">Pending</span>
+    </div>
+    <div class="test-description">Tests direct access to the forum comment placeholder SVG.</div>
+    <div class="test-url">/media-placeholder/forum-comment-placeholder.svg</div>
+    <img src="/media-placeholder/forum-comment-placeholder.svg" class="test-image" id="img6" onerror="this.dataset.error='true'; updateStatus('status6', 'failed');" onload="updateStatus('status6', 'success');">
+    <div class="test-result" id="result6"></div>
+  </div>
+
+  <script>
+    // Helper to update the status and check response headers
+    function updateStatus(statusId, status) {
+      const statusElem = document.getElementById(statusId);
+      statusElem.textContent = status === 'success' ? 'Success' : 'Failed';
+      statusElem.className = `test-status ${status}`;
+      
+      // Get the image number from the statusId
+      const imgNum = statusId.replace('status', '');
+      const img = document.getElementById('img' + imgNum);
+      const resultElem = document.getElementById('result' + imgNum);
+      
+      // Check if the image had an error
+      if (img.dataset.error === 'true') {
+        resultElem.innerHTML = 'Image failed to load.';
+        return;
+      }
+      
+      // Try to fetch headers to see if it's a fallback image
+      const url = img.src;
+      fetch(url, { method: 'HEAD' })
+        .then(response => {
+          const headers = Array.from(response.headers.entries())
+            .map(([key, value]) => `<b>${key}</b>: ${value}`)
+            .join('<br>');
+          
+          const isFallback = response.headers.get('X-Forum-Placeholder') === 'true';
+          const statusHeader = response.status === 200 ? 'OK' : response.status;
+          
+          resultElem.innerHTML = `
+            Status: ${statusHeader}<br>
+            ${isFallback ? '<b>✓ This is a fallback placeholder!</b><br>' : ''}
+            <details>
+              <summary>Response Headers</summary>
+              ${headers}
+            </details>
+          `;
+        })
+        .catch(error => {
+          resultElem.innerHTML = `Error checking headers: ${error.message}`;
+        });
+    }
+
+    // When the page loads, check for images that may have already loaded
+    window.addEventListener('load', () => {
+      for (let i = 1; i <= 6; i++) {
+        const img = document.getElementById('img' + i);
+        const statusElem = document.getElementById('status' + i);
+        
+        if (img.complete) {
+          if (img.naturalHeight === 0) {
+            // Image failed to load
+            img.dataset.error = 'true';
+            updateStatus('status' + i, 'failed');
+          } else {
+            // Image loaded successfully
+            updateStatus('status' + i, 'success');
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
